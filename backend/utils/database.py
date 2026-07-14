@@ -239,3 +239,14 @@ class Database:
             ) as cur:
                 rows = await cur.fetchall()
         return {r["key"]: r["value"] for r in rows}
+
+    # ── Reset / Delete ───────────────────────────────────────────────────────
+
+    async def delete_campaign(self, campaign_id: int) -> None:
+        """Permanently delete a campaign and every row scoped to it."""
+        async with aiosqlite.connect(self.path) as db:
+            await db.execute("DELETE FROM characters WHERE campaign_id=?", (campaign_id,))
+            await db.execute("DELETE FROM session_log WHERE campaign_id=?", (campaign_id,))
+            await db.execute("DELETE FROM world_state WHERE campaign_id=?", (campaign_id,))
+            await db.execute("DELETE FROM campaigns WHERE id=?", (campaign_id,))
+            await db.commit()

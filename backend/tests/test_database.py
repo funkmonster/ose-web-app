@@ -213,3 +213,58 @@ async def test_world_state_scoped_per_campaign(db):
     await db.set_world_state(c1["id"], "key", "value-for-c1")
 
     assert await db.get_world_state(c2["id"]) == {}
+
+
+# ── Reset / Delete ───────────────────────────────────────────────────────────
+
+async def seeded_campaign(db, guild="g1", channel="c1"):
+    campaign = await db.get_or_create_campaign(guild, channel)
+    await db.create_character(campaign["id"], "user-1", character_data())
+    await db.log_message(campaign["id"], "user", "I open the door.", author_name="Sean")
+    await db.set_world_state(campaign["id"], "current_location", "Room 1")
+    return campaign
+
+
+async def test_delete_campaign_removes_campaign_row(db):
+    campaign = await seeded_campaign(db)
+    await db.delete_campaign(campaign["id"])
+
+    assert await db.get_campaign("g1", "c1") is None
+
+
+async def test_delete_campaign_removes_characters(db):
+    campaign = await seeded_campaign(db)
+    await db.delete_campaign(campaign["id"])
+
+    assert await db.get_character(campaign["id"], "user-1") is None
+    assert await db.get_all_characters(campaign["id"]) == []
+
+
+async def test_delete_campaign_removes_session_log(db):
+    campaign = await seeded_campaign(db)
+    await db.delete_campaign(campaign["id"])
+
+    assert await db.get_history(campaign["id"]) == []
+
+
+async def test_delete_campaign_removes_world_state(db):
+    campaign = await seeded_campaign(db)
+    await db.delete_campaign(campaign["id"])
+
+    assert await db.get_world_state(campaign["id"]) == {}
+
+
+async def test_delete_campaign_does_not_affect_other_campaigns(db):
+    doomed = await seeded_campaign(db, channel="c1")
+    kept = await seeded_campaign(db, channel="c2")
+
+    await db.delete_campaign(doomed["id"])
+
+    assert await db.get_campaign("g1", "c2") is not None
+    assert len(await db.get_all_characters(kept["id"])) == 1
+    assert len(await db.get_history(kept["id"])) == 1
+    assert await db.get_world_state(kept["id"]) == {"current_location": "Room 1"}
+
+
+async def test_delete_campaign_is_idempotent_when_campaign_missing(db):
+    await db.delete_campaign(999999)  # should not raise

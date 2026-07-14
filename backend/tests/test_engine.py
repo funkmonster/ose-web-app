@@ -51,9 +51,10 @@ def game(db, config):
 
 async def test_get_campaign_delegates_to_db(game, db):
     db.get_campaign.return_value = {"id": 1, "name": "X"}
+    db.get_world_state.return_value = {}
     result = await game.get_campaign()
     db.get_campaign.assert_awaited_once_with(GUILD, CHANNEL)
-    assert result == {"id": 1, "name": "X"}
+    assert result == {"id": 1, "name": "X", "physical_dice_mode": False}
 
 
 # ── start_campaign() ─────────────────────────────────────────────────────────

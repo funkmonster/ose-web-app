@@ -22,23 +22,48 @@ Open http://localhost:8000 and enter a passphrase from `users.yaml`.
 ## Quick Start (no Docker)
 
 ```bash
-# Backend
-cd backend
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-export ANTHROPIC_API_KEY="sk-ant-..."
-uvicorn main:app --host 0.0.0.0 --port 8000
-
-# Frontend (separate terminal) — builds into backend/static
+# Frontend — build this first; the backend serves it from backend/static
 cd frontend
-npm install
-npm run build
+npm install && npm run build
+cd ..
+
+# Backend — from the repo root; needs Python 3.10+
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r backend/requirements.txt
+export ANTHROPIC_API_KEY="sk-ant-..."
+cd backend && STATIC_DIR=static uvicorn main:app --host 0.0.0.0 --port 8000
 
 # Or for frontend development with hot reload:
-npm run dev   # then open http://localhost:5173 (proxies to backend on 8000)
+cd frontend && npm run dev   # then open http://localhost:5173 (proxies to backend on 8000)
 ```
 
 After `npm run build`, the backend serves the app directly at http://localhost:8000 — one process, one port.
+
+## Playtest / scratch database
+
+Which database a session uses is decided when the **server** starts, via the
+`DB_PATH` environment variable — there's no in-app switch. Start the backend the
+normal way (Docker, or the Quick Start `uvicorn` line) and you're playing the real
+campaign in `data/campaign.db`; start it with `make playtest` and you're on the
+throwaway `data/playtest.db`. To switch, stop the server and start it the other way.
+
+Never point a manual test run at `data/campaign.db` — that's your real save file.
+Instead, run the backend against the throwaway file:
+
+```bash
+make playtest   # assumes your venv is active, same as Quick Start
+```
+
+This starts the backend with `DB_PATH=data/playtest.db` (auto-reloading), completely
+isolated from `data/campaign.db`. Delete `data/playtest.db*` any time to start fresh
+(it's gitignored and safe to churn).
+
+To populate it with a fake campaign, characters, and session log so you can hit API
+endpoints (`/api/party`, `/api/feed`, `/api/gm/*`, etc.) without an LLM key:
+
+```bash
+make seed
+```
 
 ---
 
@@ -57,7 +82,7 @@ Three users, each with a `name`, `passphrase`, `color` (hex, used in the feed), 
 | `OLLAMA_BASE_URL` / `OLLAMA_MODEL` | localhost / `llama3` | local model settings |
 | `HISTORY_WINDOW` | `20` | recent messages sent to the GM each turn |
 | `SUMMARIZE_EVERY` | `10` | player actions between summary updates |
-| `DB_PATH` | `data/campaign.db` | SQLite location |
+| `DB_PATH` | `data/campaign.db` | SQLite location — point at a scratch file for playtesting, see "Playtest / scratch database" above |
 
 ---
 
@@ -73,6 +98,7 @@ Three users, each with a `name`, `passphrase`, `color` (hex, used in the feed), 
 ### GM tools (role: gm)
 - **Narrate** — inject narration directly, bypassing the LLM (course-correct the story, run a scene by hand)
 - **Apply HP change** — manual adjustments when you need to override
+- **Reset Campaign** — permanently deletes the campaign, all characters, and the session log (type-to-confirm; there is no undo)
 
 ---
 

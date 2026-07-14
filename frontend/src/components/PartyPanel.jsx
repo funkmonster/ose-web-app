@@ -38,6 +38,8 @@ function GMTools({ party, physicalDiceMode }) {
   const [target, setTarget] = useState('')
   const [delta, setDelta] = useState(-1)
   const [msg, setMsg] = useState('')
+  const [resetOpen, setResetOpen] = useState(false)
+  const [confirmText, setConfirmText] = useState('')
 
   const toggleDiceMode = async (enabled) => {
     try {
@@ -66,6 +68,18 @@ function GMTools({ party, physicalDiceMode }) {
       setMsg('')
     } catch (e) {
       setMsg(e.message)
+    }
+  }
+
+  const resetCampaign = async () => {
+    try {
+      await api.resetCampaign()
+      setResetOpen(false)
+      setConfirmText('')
+    } catch (e) {
+      setMsg(e.message)
+      setResetOpen(false)
+      setConfirmText('')
     }
   }
 
@@ -101,6 +115,38 @@ function GMTools({ party, physicalDiceMode }) {
         />
       </div>
       <button onClick={applyHP} style={{ width: '100%' }}>Apply HP change</button>
+      <div className="danger-zone">
+        <button className="danger" onClick={() => setResetOpen(true)} style={{ width: '100%' }}>
+          Reset Campaign…
+        </button>
+      </div>
+      {resetOpen && (
+        <div className="modal-veil" onClick={() => setResetOpen(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Reset Campaign</h2>
+            <p>
+              This permanently deletes the campaign, every character, and the full
+              session log. There is no backup — this cannot be undone.
+            </p>
+            <p>Type <strong>RESET</strong> to confirm.</p>
+            <input
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              autoFocus
+            />
+            <div className="close-row">
+              <button onClick={() => setResetOpen(false)}>Cancel</button>
+              <button
+                className="danger"
+                disabled={confirmText !== 'RESET'}
+                onClick={resetCampaign}
+              >
+                Delete Everything
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

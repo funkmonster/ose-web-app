@@ -102,6 +102,13 @@ function Table({ user, character, setCharacter }) {
         setParty(payload.party)
         refreshMyCharacter()
         break
+      case 'campaign_reset':
+        setParty([])
+        setFeed([])
+        setPhysicalDiceMode(false)
+        setThinking(null)
+        setCharacter(null)
+        break
       default:
         break
     }
