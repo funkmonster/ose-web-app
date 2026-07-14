@@ -1,0 +1,44 @@
+// Thin API client. Passphrase is stored in localStorage after first login.
+
+const KEY = 'ose_passphrase'
+
+export const getPassphrase = () => localStorage.getItem(KEY) || ''
+export const setPassphrase = (p) => localStorage.setItem(KEY, p)
+export const clearPassphrase = () => localStorage.removeItem(KEY)
+
+async function request(method, path, body) {
+  const res = await fetch(path, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Passphrase': getPassphrase(),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail || 'Request failed')
+  }
+  return res.json()
+}
+
+export const api = {
+  login: (passphrase) => request('POST', '/api/login', { passphrase }),
+  me: () => request('GET', '/api/me'),
+  campaign: () => request('GET', '/api/campaign'),
+  startCampaign: (name, module) => request('POST', '/api/campaign/start', { name, module }),
+  feed: () => request('GET', '/api/feed'),
+  recap: () => request('GET', '/api/recap'),
+  summary: () => request('GET', '/api/summary'),
+  play: (action) => request('POST', '/api/play', { action }),
+  roll: (notation, reason) => request('POST', '/api/roll', { notation, reason }),
+  rollStats: () => request('GET', '/api/roll_stats'),
+  character: () => request('GET', '/api/character'),
+  createCharacter: (data) => request('POST', '/api/character', data),
+  party: () => request('GET', '/api/party'),
+  updateInventory: (inventory) => request('PUT', '/api/character/inventory', { inventory }),
+  updateSpells: (spells) => request('PUT', '/api/character/spells', { spells }),
+  rest: (rest_type) => request('POST', '/api/rest', { rest_type }),
+  gmSay: (message) => request('POST', '/api/gm/say', { message }),
+  gmUpdateHP: (target_user, delta) => request('POST', '/api/gm/update_hp', { target_user, delta }),
+}

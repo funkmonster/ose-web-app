@@ -1,0 +1,20 @@
+# OSE App — User Configuration
+# Each user has a name, passphrase, and a color (used in the GM feed).
+# Passphrases are plain text here since this is a private self-hosted app.
+# Change these before running.
+
+users:
+  - name: Sean
+    passphrase: "keep-on-the-borderlands"
+    color: "#7eb8f7"   # blue
+    role: gm           # 'gm' gets access to /gm_say and /update_hp
+
+  - name: Friend1
+    passphrase: "moldvay-rules"
+    color: "#f7a07e"   # orange
+    role: player
+
+  - name: Friend2
+    passphrase: "dungeon-delver"
+    color: "#7ef7a0"   # green
+    role: player

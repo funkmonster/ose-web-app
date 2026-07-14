@@ -1,0 +1,14 @@
+services:
+  ose-app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      LLM_PROVIDER: anthropic
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      # ANTHROPIC_MODEL: claude-sonnet-4-6
+      # SUMMARIZE_EVERY: "10"
+    volumes:
+      - ./data:/app/data
+      - ./users.yaml:/app/users.yaml:ro
+    restart: unless-stopped
