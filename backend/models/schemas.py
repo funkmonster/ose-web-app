@@ -27,6 +27,10 @@ class CreateCharacterRequest(BaseModel):
     cha_score: int = Field(ge=3, le=18)
     ac: int = 9
     gold: float = 0.0
+    hp_max: Optional[int] = Field(default=None, ge=1)
+    race: Optional[str] = None
+    inventory: list[str] = []
+    spells: list[str] = []
 
 
 class PlayActionRequest(BaseModel):
