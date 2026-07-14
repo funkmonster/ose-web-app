@@ -1,20 +1,24 @@
 # OSE App — User Configuration
 # Each user has a name, passphrase, and a color (used in the GM feed).
 # Passphrases are plain text here since this is a private self-hosted app.
-# Change these before running.
+#
+# Copy this file to users.yaml and edit it — users.yaml is gitignored since
+# it holds your table's real passphrases.
+#
+#   cp users.yaml.example users.yaml
 
 users:
-  - name: Sean
-    passphrase: "keep-on-the-borderlands"
+  - name: "Player1"
+    passphrase: "change-me-1"
     color: "#7eb8f7"   # blue
     role: gm           # 'gm' gets access to /gm_say and /update_hp
 
-  - name: Friend1
-    passphrase: "moldvay-rules"
+  - name: "Player2"
+    passphrase: "change-me-2"
     color: "#f7a07e"   # orange
     role: player
 
-  - name: Friend2
-    passphrase: "dungeon-delver"
+  - name: "Player3"
+    passphrase: "change-me-3"
     color: "#7ef7a0"   # green
     role: player
