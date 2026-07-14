@@ -1,7 +1,11 @@
 # OSE App — User Configuration
 # Each user has a name, passphrase, and a color (used in the GM feed).
 # Passphrases are plain text here since this is a private self-hosted app.
-# Change these before running.
+#
+# Copy this file to users.yaml and edit it — users.yaml is gitignored since
+# it holds your table's real passphrases.
+#
+#   cp users.yaml.example users.yaml
 
 users:
   - name: Sean

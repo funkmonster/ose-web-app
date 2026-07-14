@@ -9,7 +9,9 @@ The GM's narration renders as classic module boxed read-aloud text — cream pap
 ## Quick Start (Docker — recommended)
 
 ```bash
-# 1. Edit users.yaml — set names, passphrases, and who is GM
+# 1. Copy users.yaml.example to users.yaml — set names, passphrases, and who is GM
+cp users.yaml.example users.yaml
+
 # 2. Set your LLM key
 export ANTHROPIC_API_KEY="sk-ant-..."
 
@@ -22,6 +24,9 @@ Open http://localhost:8000 and enter a passphrase from `users.yaml`.
 ## Quick Start (no Docker)
 
 ```bash
+# Users — copy the template and edit names/passphrases/roles
+cp users.yaml.example users.yaml
+
 # Frontend — build this first; the backend serves it from backend/static
 cd frontend
 npm install && npm run build
@@ -70,7 +75,7 @@ make seed
 ## Configuration
 
 ### users.yaml
-Three users, each with a `name`, `passphrase`, `color` (hex, used in the feed), and `role` (`gm` or `player`). The `gm` role unlocks manual narration and HP adjustment tools. Change the passphrases before you share the URL.
+Copy `users.yaml.example` to `users.yaml` (gitignored — it holds your table's real passphrases). Three users, each with a `name`, `passphrase`, `color` (hex, used in the feed), and `role` (`gm` or `player`). The `gm` role unlocks manual narration and HP adjustment tools. Change the passphrases before you share the URL.
 
 ### Environment variables
 | Variable | Default | Purpose |
