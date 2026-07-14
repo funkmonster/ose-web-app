@@ -59,19 +59,6 @@ Three users, each with a `name`, `passphrase`, `color` (hex, used in the feed), 
 | `SUMMARIZE_EVERY` | `10` | player actions between summary updates |
 | `DB_PATH` | `data/campaign.db` | SQLite location |
 
-### Migrating from the Discord bot
-The schema is identical. Copy the bot's `data/campaign.db` into this app's `data/` directory. One caveat: characters in the bot are keyed by Discord user IDs, while the app keys them by the `name` values in `users.yaml`. To carry over characters, update the `discord_user_id` column to match your app usernames:
-
-```sql
-UPDATE characters SET discord_user_id = 'Sean' WHERE discord_user_id = '<your discord id>';
-```
-
-Also update the campaign row to the app's fixed scope:
-
-```sql
-UPDATE campaigns SET guild_id = 'local', channel_id = 'main';
-```
-
 ---
 
 ## Playing
@@ -102,7 +89,7 @@ ose-app/
 │   ├── ws_manager.py       # broadcast layer
 │   ├── config.py           # env + users.yaml loading
 │   ├── models/schemas.py   # Pydantic request models
-│   └── utils/              # carried over from the Discord bot:
+│   └── utils/              
 │       ├── database.py     #   SQLite layer (same schema)
 │       ├── llm.py          #   provider adapter + OSE system prompt
 │       ├── summarizer.py   #   rolling long-term memory
