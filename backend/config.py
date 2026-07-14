@@ -12,6 +12,7 @@ class Config:
     # ─── Paths ───────────────────────────────────────────────────────────────
     BASE_DIR = Path(__file__).resolve().parent.parent
     DB_PATH: str = os.getenv("DB_PATH", str(BASE_DIR / "data" / "campaign.db"))
+    SRD_DB_PATH: str = os.getenv("SRD_DB_PATH", str(BASE_DIR / "data" / "srd_cache.db"))
     USERS_FILE: str = os.getenv("USERS_FILE", str(BASE_DIR / "users.yaml"))
     STATIC_DIR: str = os.getenv("STATIC_DIR", str(BASE_DIR / "static"))
 

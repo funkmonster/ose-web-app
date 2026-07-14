@@ -17,6 +17,7 @@ from config import Config
 from engine import GameEngine
 from ws_manager import manager
 from utils.database import Database
+from utils.srd_lookup import load_srd_index
 from utils.dice import roll as roll_dice, roll_ability_scores, bx_modifier
 from models.schemas import (
     LoginRequest, LoginResponse, CreateCharacterRequest, PlayActionRequest,
@@ -41,6 +42,9 @@ gm_lock = asyncio.Lock()
 async def lifespan(app: FastAPI):
     await db.init()
     log.info("Database initialized: %s", config.DB_PATH)
+    engine.srd_index = await load_srd_index(config.SRD_DB_PATH)
+    log.info("SRD cache loaded: %d sections from %s",
+             len(engine.srd_index.sections), config.SRD_DB_PATH)
     yield
 
 

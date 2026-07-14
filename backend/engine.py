@@ -13,6 +13,7 @@ from utils.llm import get_gm_response
 from utils.state_parser import parse_state_block, strip_state_block, apply_state_changes
 from utils.summarizer import maybe_update_summary, SUMMARY_KEY
 from utils.dice import roll as roll_dice, bx_modifier, roll_ability_scores
+from utils.srd_lookup import SrdIndex, format_srd_context
 
 log = logging.getLogger("ose-app.engine")
 
@@ -25,9 +26,10 @@ PHYSICAL_DICE_KEY = "physical_dice_mode"
 
 
 class GameEngine:
-    def __init__(self, db, config: Config):
+    def __init__(self, db, config: Config, srd_index: SrdIndex | None = None):
         self.db = db
         self.config = config
+        self.srd_index = srd_index
 
     # ── Campaign ─────────────────────────────────────────────────────────────
 
@@ -92,7 +94,8 @@ class GameEngine:
         all_chars = await self.db.get_all_characters(campaign["id"])
         history = await self.db.get_history(campaign["id"], limit=self.config.HISTORY_WINDOW)
 
-        context_prefix = build_context_prefix(world, all_chars)
+        srd_sections = self.srd_index.search(action) if self.srd_index else []
+        context_prefix = build_context_prefix(world, all_chars, srd_sections=srd_sections)
         messages = build_messages(history, context_prefix)
 
         gm_reply = await get_gm_response(messages, self.config)
@@ -316,7 +319,7 @@ def build_messages(history: list[dict], context_prefix: str = "") -> list[dict]:
     return messages
 
 
-def build_context_prefix(world: dict, chars: list[dict]) -> str:
+def build_context_prefix(world: dict, chars: list[dict], srd_sections: list | None = None) -> str:
     lines = ["[CURRENT STATE — for GM reference only, do not read aloud]"]
 
     summary = world.get(SUMMARY_KEY, "").strip()
@@ -349,5 +352,8 @@ def build_context_prefix(world: dict, chars: list[dict]) -> str:
                 lines.append(f"    Inventory: {', '.join(c['inventory'])}")
             if c["spells"]:
                 lines.append(f"    Spells: {', '.join(c['spells'])}")
+
+    if srd_sections:
+        lines.append("\n" + format_srd_context(srd_sections))
 
     return "\n".join(lines)
