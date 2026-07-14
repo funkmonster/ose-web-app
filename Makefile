@@ -1,4 +1,4 @@
-.PHONY: playtest seed test
+.PHONY: playtest seed test srd-cache
 
 # Run the backend against a throwaway SQLite file — never touches data/campaign.db.
 playtest:
@@ -10,3 +10,7 @@ seed:
 
 test:
 	cd backend && pytest
+
+# One-time (or periodic refresh) crawl of the OSE SRD into a local rules cache.
+srd-cache:
+	python backend/scripts/build_srd_cache.py
