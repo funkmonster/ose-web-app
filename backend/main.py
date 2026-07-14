@@ -40,7 +40,7 @@ gm_lock = asyncio.Lock()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await db.init()
-    log.info("Database initialized.")
+    log.info("Database initialized: %s", config.DB_PATH)
     yield
 
 

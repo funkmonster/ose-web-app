@@ -240,11 +240,16 @@ class GameEngine:
                              f"Valid: {', '.join(CLASS_HIT_DIE.keys())}")
 
         hd = CLASS_HIT_DIE[char_class]
-        con_mod = bx_modifier(data["con_score"])
-        hp_roll, _, _ = _roll(f"1d{hd}")
-        hp_max = max(1, hp_roll + con_mod)
+        if data.get("hp_max"):
+            hp_max = data["hp_max"]
+        else:
+            con_mod = bx_modifier(data["con_score"])
+            hp_roll, _, _ = _roll(f"1d{hd}")
+            hp_max = max(1, hp_roll + con_mod)
 
-        race = char_class if char_class in ("Dwarf", "Elf", "Halfling") else "Human"
+        race = data.get("race") or (
+            char_class if char_class in ("Dwarf", "Elf", "Halfling") else "Human"
+        )
 
         await self.db.create_character(campaign["id"], user_name, {
             "name": data["name"], "class": char_class, "race": race,
@@ -253,7 +258,7 @@ class GameEngine:
             "str": data["str_score"], "dex": data["dex_score"], "con": data["con_score"],
             "int": data["int_score"], "wis": data["wis_score"], "cha": data["cha_score"],
             "ac": data.get("ac", 9), "gold": data.get("gold", 0.0),
-            "inventory": [], "spells": [],
+            "inventory": data.get("inventory", []), "spells": data.get("spells", []),
         })
         return await self.db.get_character(campaign["id"], user_name)
 
