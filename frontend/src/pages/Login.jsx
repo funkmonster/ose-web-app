@@ -21,7 +21,7 @@ export default function Login({ onLogin }) {
   return (
     <div className="gate">
       <div className="box">
-        <h1>The Borderlands Table</h1>
+        <h1>The Old School Essentials Table</h1>
         <p>
           The road ends at a torchlit gate. A voice from the arrow slit above:
           "Speak the passphrase, traveler."

@@ -1,4 +1,4 @@
-# The Borderlands Table
+# The Old School Essentials Table
 
 A self-hosted web app for playing B/X D&D / Old-School Essentials with an LLM Dungeon Master. Built for a party of three. Real-time multiplayer over WebSockets, persistent campaign state in SQLite, and long-term GM memory via rolling summarization.
 

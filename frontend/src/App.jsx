@@ -106,7 +106,7 @@ function Table({ user, character, setCharacter }) {
     <div className="shell">
       <header className="header">
         <h1>
-          The Borderlands Table
+          The Old School Essentials Table
           <span className="sub">B/X · Old-School Essentials</span>
         </h1>
         <div className="presence">
