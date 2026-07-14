@@ -89,7 +89,7 @@ ose-app/
 │   ├── ws_manager.py       # broadcast layer
 │   ├── config.py           # env + users.yaml loading
 │   ├── models/schemas.py   # Pydantic request models
-│   └── utils/              # carried over from the Discord bot:
+│   └── utils/              
 │       ├── database.py     #   SQLite layer (same schema)
 │       ├── llm.py          #   provider adapter + OSE system prompt
 │       ├── summarizer.py   #   rolling long-term memory
