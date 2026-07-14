@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { api } from '../api'
 
-export default function PartyPanel({ party, user, className = '' }) {
+export default function PartyPanel({ party, user, physicalDiceMode, className = '' }) {
   return (
     <aside className={`panel party-panel ${className}`}>
       <h2>The Party</h2>
@@ -11,7 +11,7 @@ export default function PartyPanel({ party, user, className = '' }) {
         </div>
       )}
       {party.map((c) => <PartyCard key={c.id} c={c} />)}
-      {user.role === 'gm' && <GMTools party={party} />}
+      {user.role === 'gm' && <GMTools party={party} physicalDiceMode={physicalDiceMode} />}
     </aside>
   )
 }
@@ -33,11 +33,20 @@ function PartyCard({ c }) {
   )
 }
 
-function GMTools({ party }) {
+function GMTools({ party, physicalDiceMode }) {
   const [narration, setNarration] = useState('')
   const [target, setTarget] = useState('')
   const [delta, setDelta] = useState(-1)
   const [msg, setMsg] = useState('')
+
+  const toggleDiceMode = async (enabled) => {
+    try {
+      await api.setPhysicalDiceMode(enabled)
+      setMsg('')
+    } catch (e) {
+      setMsg(e.message)
+    }
+  }
 
   const say = async () => {
     if (!narration.trim()) return
@@ -64,6 +73,14 @@ function GMTools({ party }) {
     <div className="gm-tools">
       <h2>GM Tools</h2>
       {msg && <div style={{ color: 'var(--magenta)', fontSize: 12, marginBottom: 6 }}>{msg}</div>}
+      <label className="row" style={{ alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <input
+          type="checkbox"
+          checked={physicalDiceMode}
+          onChange={(e) => toggleDiceMode(e.target.checked)}
+        />
+        Physical dice mode
+      </label>
       <textarea
         placeholder="Narrate directly (bypasses the LLM)"
         value={narration}

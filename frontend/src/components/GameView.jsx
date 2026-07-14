@@ -3,9 +3,11 @@ import { api } from '../api'
 
 const QUICK_DICE = ['1d20', '1d6', '2d6', '3d6', '1d8', '1d4', '1d100']
 
-export default function GameView({ feed, thinking, user, character }) {
+export default function GameView({ feed, thinking, user, character, physicalDiceMode }) {
   const [action, setAction] = useState('')
   const [customDie, setCustomDie] = useState('')
+  const [reportNotation, setReportNotation] = useState('')
+  const [reportResult, setReportResult] = useState('')
   const [busy, setBusy] = useState(false)
   const [modal, setModal] = useState(null) // {title, content}
   const [error, setError] = useState('')
@@ -39,6 +41,18 @@ export default function GameView({ feed, thinking, user, character }) {
   const rollDie = async (notation) => {
     try {
       await api.roll(notation, '')
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+
+  const reportRoll = async () => {
+    const notation = reportNotation.trim()
+    if (!notation || reportResult === '') return
+    try {
+      await api.roll(notation, '', Number(reportResult))
+      setReportNotation('')
+      setReportResult('')
     } catch (e) {
       setError(e.message)
     }
@@ -127,20 +141,47 @@ export default function GameView({ feed, thinking, user, character }) {
           </button>
         </div>
         <div className="dice-row">
-          {QUICK_DICE.map((d) => (
-            <button key={d} className="chip" onClick={() => rollDie(d)}>{d}</button>
-          ))}
-          <input
-            placeholder="2d4+1"
-            value={customDie}
-            onChange={(e) => setCustomDie(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && customDie.trim()) {
-                rollDie(customDie.trim())
-                setCustomDie('')
-              }
-            }}
-          />
+          {physicalDiceMode ? (
+            <>
+              <input
+                placeholder="notation, e.g. 1d20"
+                value={reportNotation}
+                onChange={(e) => setReportNotation(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') reportRoll() }}
+              />
+              <input
+                type="number"
+                placeholder="result"
+                value={reportResult}
+                onChange={(e) => setReportResult(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') reportRoll() }}
+              />
+              <button
+                className="chip"
+                onClick={reportRoll}
+                disabled={!reportNotation.trim() || reportResult === ''}
+              >
+                🎲 Report Roll
+              </button>
+            </>
+          ) : (
+            <>
+              {QUICK_DICE.map((d) => (
+                <button key={d} className="chip" onClick={() => rollDie(d)}>{d}</button>
+              ))}
+              <input
+                placeholder="2d4+1"
+                value={customDie}
+                onChange={(e) => setCustomDie(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && customDie.trim()) {
+                    rollDie(customDie.trim())
+                    setCustomDie('')
+                  }
+                }}
+              />
+            </>
+          )}
           <span style={{ flex: 1 }} />
           <button className="chip" onClick={showRecap}>Recap</button>
           <button className="chip" onClick={showSummary}>Memory</button>
@@ -216,13 +257,14 @@ function FeedEvent({ ev }) {
       )
     case 'roll':
       return (
-        <div className="msg-roll" style={{ '--player-color': ev.color }}>
+        <div className={`msg-roll ${ev.physical ? 'physical' : ''}`} style={{ '--player-color': ev.color }}>
           <span className="die">{ev.total}</span>
           <span>
             <span className="who">{ev.author}</span>
-            {' '}rolled {ev.notation}
+            {' '}{ev.physical ? 'reported' : 'rolled'} {ev.notation}
             {ev.rolls?.length > 1 && ` [${ev.rolls.join(', ')}]`}
             {ev.reason && ` — ${ev.reason}`}
+            {ev.physical && <span className="physical-badge"> 🎲 physical</span>}
           </span>
         </div>
       )

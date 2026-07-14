@@ -57,6 +57,7 @@ function Table({ user, character, setCharacter }) {
   const [feed, setFeed] = useState([])
   const [thinking, setThinking] = useState(null)
   const [mobilePanel, setMobilePanel] = useState(null)
+  const [physicalDiceMode, setPhysicalDiceMode] = useState(false)
 
   // Initial data
   useEffect(() => {
@@ -64,6 +65,7 @@ function Table({ user, character, setCharacter }) {
     api.feed().then((rows) => {
       setFeed(rows.map((r) => historyToEvent(r)))
     }).catch(() => {})
+    api.campaign().then((c) => setPhysicalDiceMode(!!c.physical_dice_mode)).catch(() => {})
   }, [])
 
   const refreshMyCharacter = useCallback(() => {
@@ -89,6 +91,9 @@ function Table({ user, character, setCharacter }) {
         break
       case 'dice_roll':
         setFeed((f) => [...f, { kind: 'roll', ...payload }])
+        break
+      case 'physical_dice_mode':
+        setPhysicalDiceMode(payload.enabled)
         break
       case 'system_message':
         setFeed((f) => [...f, { kind: 'system', content: payload.content }])
@@ -122,6 +127,7 @@ function Table({ user, character, setCharacter }) {
       <PartyPanel
         party={party}
         user={user}
+        physicalDiceMode={physicalDiceMode}
         className={mobilePanel === 'party' ? 'mobile-open' : ''}
       />
 
@@ -130,6 +136,7 @@ function Table({ user, character, setCharacter }) {
         thinking={thinking}
         user={user}
         character={character}
+        physicalDiceMode={physicalDiceMode}
       />
 
       <CharacterSheet

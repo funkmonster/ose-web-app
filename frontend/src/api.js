@@ -31,7 +31,8 @@ export const api = {
   recap: () => request('GET', '/api/recap'),
   summary: () => request('GET', '/api/summary'),
   play: (action) => request('POST', '/api/play', { action }),
-  roll: (notation, reason) => request('POST', '/api/roll', { notation, reason }),
+  roll: (notation, reason, reportedResult) =>
+    request('POST', '/api/roll', { notation, reason, reported_result: reportedResult ?? null }),
   rollStats: () => request('GET', '/api/roll_stats'),
   character: () => request('GET', '/api/character'),
   createCharacter: (data) => request('POST', '/api/character', data),
@@ -41,4 +42,5 @@ export const api = {
   rest: (rest_type) => request('POST', '/api/rest', { rest_type }),
   gmSay: (message) => request('POST', '/api/gm/say', { message }),
   gmUpdateHP: (target_user, delta) => request('POST', '/api/gm/update_hp', { target_user, delta }),
+  setPhysicalDiceMode: (enabled) => request('POST', '/api/gm/physical_dice_mode', { enabled }),
 }
