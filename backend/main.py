@@ -293,6 +293,19 @@ async def gm_set_physical_dice_mode(req: PhysicalDiceModeRequest, user: dict = D
     return {"enabled": enabled}
 
 
+@app.post("/api/gm/reset_campaign")
+async def gm_reset_campaign(user: dict = Depends(gm_user)):
+    # Takes gm_lock (unlike the other GM tools) so the delete can't race an
+    # in-flight play()/start_campaign() that already holds a campaign_id.
+    async with gm_lock:
+        try:
+            result = await engine.reset_campaign()
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    await manager.broadcast("campaign_reset", {"name": result["name"]})
+    return {"ok": True, "name": result["name"]}
+
+
 # ── WebSocket ─────────────────────────────────────────────────────────────────
 
 @app.websocket("/ws")

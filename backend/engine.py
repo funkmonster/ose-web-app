@@ -199,6 +199,15 @@ class GameEngine:
                                       "true" if enabled else "false")
         return enabled
 
+    async def reset_campaign(self) -> dict:
+        """Hard-delete the current campaign and everything scoped to it."""
+        campaign = await self.get_campaign()
+        if not campaign:
+            raise ValueError("No campaign to reset.")
+        name = campaign["name"]
+        await self.db.delete_campaign(campaign["id"])
+        return {"name": name}
+
     # ── Characters ───────────────────────────────────────────────────────────
 
     async def get_character(self, user_name: str):

@@ -473,6 +473,14 @@ input, textarea, select {
 .gm-tools .row { display: flex; gap: 6px; margin-bottom: 6px; }
 .gm-tools select, .gm-tools input { font-size: 12px; padding: 5px 8px; }
 .gm-tools input[type="number"] { width: 64px; }
+.gm-tools .danger-zone { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--magenta); }
+
+button.danger {
+  border-color: var(--magenta);
+  color: var(--magenta);
+}
+button.danger:hover:not(:disabled) { background: var(--magenta); color: #fff; }
+button.danger:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ─── Responsive ────────────────────────────────────────────────────────── */
 

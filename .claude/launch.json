@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "playtest",
+      "runtimeExecutable": "backend/venv/bin/python",
+      "runtimeArgs": ["-m", "uvicorn", "main:app", "--app-dir", "backend", "--host", "127.0.0.1", "--port", "8000"],
+      "env": { "DB_PATH": "data/playtest.db", "STATIC_DIR": "backend/static" },
+      "port": 8000
+    }
+  ]
+}

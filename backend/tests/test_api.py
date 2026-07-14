@@ -413,6 +413,60 @@ def test_gm_update_hp_success_and_death_broadcast(client, mock_gm, mock_broadcas
     assert "system_message" in event_types
 
 
+# ── Reset campaign ────────────────────────────────────────────────────────────
+
+def test_reset_campaign_forbidden_for_player(client):
+    resp = client.post("/api/gm/reset_campaign", headers=player_headers())
+    assert resp.status_code == 403
+
+
+def test_reset_campaign_forbidden_without_campaign_but_checks_role_first(client):
+    # Role check happens before the campaign-exists check, so a non-GM still gets 403
+    # even with no campaign started.
+    resp = client.post("/api/gm/reset_campaign", headers=player_headers())
+    assert resp.status_code == 403
+
+
+def test_reset_campaign_without_campaign_returns_400_for_gm(client):
+    resp = client.post("/api/gm/reset_campaign", headers=gm_headers())
+    assert resp.status_code == 400
+
+
+def test_reset_campaign_success_clears_campaign_and_party(client, mock_gm):
+    start_campaign(client)
+    create_character(client)
+
+    resp = client.post("/api/gm/reset_campaign", headers=gm_headers())
+
+    assert resp.status_code == 200
+    assert resp.json()["name"] == "Test Campaign"
+    assert client.get("/api/campaign", headers=player_headers()).json() == {}
+    assert client.get("/api/party", headers=player_headers()).json() == []
+
+
+def test_reset_campaign_broadcasts_campaign_reset_event(client, mock_gm, mock_broadcast):
+    start_campaign(client)
+    mock_broadcast.reset_mock()
+
+    client.post("/api/gm/reset_campaign", headers=gm_headers())
+
+    events = {call.args[0]: call.args[1] for call in mock_broadcast.await_args_list}
+    assert events["campaign_reset"] == {"name": "Test Campaign"}
+
+
+def test_reset_campaign_allows_starting_new_campaign_after(client, mock_gm):
+    start_campaign(client)
+    create_character(client)
+    client.post("/api/gm/reset_campaign", headers=gm_headers())
+
+    resp = start_campaign(client)
+
+    assert resp.status_code == 200
+    campaign = client.get("/api/campaign", headers=player_headers()).json()
+    assert campaign["name"] == "Test Campaign"
+    assert client.get("/api/party", headers=player_headers()).json() == []
+
+
 # ── WebSocket ─────────────────────────────────────────────────────────────────
 
 def test_websocket_rejects_invalid_passphrase(client):
