@@ -257,6 +257,12 @@ input, textarea, select {
   font-weight: 700;
 }
 .msg-roll .who { color: var(--player-color, var(--text)); font-weight: 600; }
+.msg-roll.physical .die { color: var(--player-color, var(--text)); }
+.physical-badge {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+}
 
 /* System messages */
 .msg-system {

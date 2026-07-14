@@ -36,6 +36,7 @@ class PlayActionRequest(BaseModel):
 class RollRequest(BaseModel):
     notation: str
     reason: str = ""
+    reported_result: Optional[int] = None
 
 
 class GMSayRequest(BaseModel):
@@ -45,6 +46,10 @@ class GMSayRequest(BaseModel):
 class UpdateHPRequest(BaseModel):
     target_user: str
     delta: int
+
+
+class PhysicalDiceModeRequest(BaseModel):
+    enabled: bool
 
 
 class StartCampaignRequest(BaseModel):

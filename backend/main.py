@@ -22,6 +22,7 @@ from models.schemas import (
     LoginRequest, LoginResponse, CreateCharacterRequest, PlayActionRequest,
     RollRequest, GMSayRequest, UpdateHPRequest, StartCampaignRequest,
     RestRequest, UpdateInventoryRequest, UpdateSpellsRequest,
+    PhysicalDiceModeRequest,
 )
 
 logging.basicConfig(level=logging.INFO,
@@ -155,10 +156,14 @@ async def play(req: PlayActionRequest, user: dict = Depends(current_user)):
 
 @app.post("/api/roll")
 async def roll(req: RollRequest, user: dict = Depends(current_user)):
-    try:
-        total, rolls, desc = roll_dice(req.notation)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    if req.reported_result is not None:
+        total, rolls, physical = req.reported_result, [], True
+    else:
+        try:
+            total, rolls, desc = roll_dice(req.notation)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        physical = False
 
     await manager.broadcast("dice_roll", {
         "author": user["name"],
@@ -167,6 +172,7 @@ async def roll(req: RollRequest, user: dict = Depends(current_user)):
         "reason": req.reason,
         "rolls": rolls,
         "total": total,
+        "physical": physical,
     })
     return {"total": total, "rolls": rolls}
 
@@ -275,6 +281,16 @@ async def gm_update_hp(req: UpdateHPRequest, user: dict = Depends(gm_user)):
         await manager.broadcast("system_message",
                                 {"content": f"💀 {result['name']} has fallen!"})
     return result
+
+
+@app.post("/api/gm/physical_dice_mode")
+async def gm_set_physical_dice_mode(req: PhysicalDiceModeRequest, user: dict = Depends(gm_user)):
+    try:
+        enabled = await engine.set_physical_dice_mode(req.enabled)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    await manager.broadcast("physical_dice_mode", {"enabled": enabled})
+    return {"enabled": enabled}
 
 
 # ── WebSocket ─────────────────────────────────────────────────────────────────

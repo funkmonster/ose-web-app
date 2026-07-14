@@ -21,6 +21,8 @@ log = logging.getLogger("ose-app.engine")
 GUILD = "local"
 CHANNEL = "main"
 
+PHYSICAL_DICE_KEY = "physical_dice_mode"
+
 
 class GameEngine:
     def __init__(self, db, config: Config):
@@ -30,7 +32,12 @@ class GameEngine:
     # ── Campaign ─────────────────────────────────────────────────────────────
 
     async def get_campaign(self):
-        return await self.db.get_campaign(GUILD, CHANNEL)
+        campaign = await self.db.get_campaign(GUILD, CHANNEL)
+        if not campaign:
+            return None
+        world = await self.db.get_world_state(campaign["id"])
+        campaign["physical_dice_mode"] = world.get(PHYSICAL_DICE_KEY, "false") == "true"
+        return campaign
 
     async def start_campaign(self, name: str, module: str) -> dict:
         campaign = await self.db.get_or_create_campaign(GUILD, CHANNEL, name)
@@ -184,6 +191,14 @@ class GameEngine:
                                        hp_current=new_hp, alive=alive)
         return {"name": char["name"], "hp": new_hp, "hp_max": char["hp_max"], "alive": bool(alive)}
 
+    async def set_physical_dice_mode(self, enabled: bool) -> bool:
+        campaign = await self.get_campaign()
+        if not campaign:
+            raise ValueError("No campaign started.")
+        await self.db.set_world_state(campaign["id"], PHYSICAL_DICE_KEY,
+                                      "true" if enabled else "false")
+        return enabled
+
     # ── Characters ───────────────────────────────────────────────────────────
 
     async def get_character(self, user_name: str):
@@ -295,7 +310,14 @@ def build_context_prefix(world: dict, chars: list[dict]) -> str:
         lines.append("\nCAMPAIGN SUMMARY (everything that has happened so far):")
         lines.append(summary)
 
-    _internal = {SUMMARY_KEY, "player_action_count"}
+    if world.get(PHYSICAL_DICE_KEY) == "true":
+        lines.append(
+            "\nPHYSICAL DICE MODE IS ON: the party is rolling real dice at the table. "
+            "Announce what to roll but do not roll dice yourself or state a result — "
+            "wait for the player to report what they rolled."
+        )
+
+    _internal = {SUMMARY_KEY, "player_action_count", PHYSICAL_DICE_KEY}
     world_facts = {k: v for k, v in world.items() if k not in _internal}
     if world_facts:
         lines.append("\nCurrent World State:")
