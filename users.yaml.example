@@ -8,17 +8,17 @@
 #   cp users.yaml.example users.yaml
 
 users:
-  - name: Sean
-    passphrase: "keep-on-the-borderlands"
+  - name: "Player1"
+    passphrase: "change-me-1"
     color: "#7eb8f7"   # blue
     role: gm           # 'gm' gets access to /gm_say and /update_hp
 
-  - name: Friend1
-    passphrase: "moldvay-rules"
+  - name: "Player2"
+    passphrase: "change-me-2"
     color: "#f7a07e"   # orange
     role: player
 
-  - name: Friend2
-    passphrase: "dungeon-delver"
+  - name: "Player3"
+    passphrase: "change-me-3"
     color: "#7ef7a0"   # green
     role: player
