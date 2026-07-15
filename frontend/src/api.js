@@ -33,7 +33,6 @@ export const api = {
   play: (action) => request('POST', '/api/play', { action }),
   roll: (notation, reason, reportedResult) =>
     request('POST', '/api/roll', { notation, reason, reported_result: reportedResult ?? null }),
-  rollStats: () => request('GET', '/api/roll_stats'),
   character: () => request('GET', '/api/character'),
   createCharacter: (data) => request('POST', '/api/character', data),
   party: () => request('GET', '/api/party'),

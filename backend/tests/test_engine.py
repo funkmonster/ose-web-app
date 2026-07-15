@@ -374,6 +374,7 @@ def base_char_request(**overrides):
         name="Thoradin", char_class="Fighter",
         str_score=14, dex_score=12, con_score=14,
         int_score=9, wis_score=10, cha_score=8,
+        hp_max=8,
     )
     data.update(overrides)
     return data
@@ -395,11 +396,9 @@ async def test_create_character_raises_for_unknown_class(game, db):
         await game.create_character("Sean", base_char_request(char_class="Wizard"))
 
 
-async def test_create_character_normalizes_class_case_and_whitespace(game, db, monkeypatch):
+async def test_create_character_normalizes_class_case_and_whitespace(game, db):
     db.get_or_create_campaign.return_value = {"id": 1}
-    db.get_character.return_value = None
     db.get_character.side_effect = [None, {"name": "Thoradin"}]
-    monkeypatch.setattr("utils.dice.random.randint", lambda a, b: 5)
 
     await game.create_character("Sean", base_char_request(char_class="  fighter  "))
 
@@ -407,29 +406,15 @@ async def test_create_character_normalizes_class_case_and_whitespace(game, db, m
     assert created_data["class"] == "Fighter"
 
 
-async def test_create_character_computes_hp_from_hit_die_and_con_modifier(game, db, monkeypatch):
+async def test_create_character_uses_provided_hp_max_as_is(game, db):
     db.get_or_create_campaign.return_value = {"id": 1}
     db.get_character.side_effect = [None, {"name": "Thoradin"}]
-    monkeypatch.setattr("utils.dice.random.randint", lambda a, b: 4)  # 1d8 -> 4
 
-    await game.create_character("Sean", base_char_request(char_class="Fighter", con_score=14))
-
-    created_data = db.create_character.await_args.args[2]
-    # con 14 -> +1 modifier (13-15 band); hp = 4 + 1 = 5
-    assert created_data["hp_max"] == 5
-    assert created_data["hp_current"] == 5
-
-
-async def test_create_character_hp_floors_at_one(game, db, monkeypatch):
-    db.get_or_create_campaign.return_value = {"id": 1}
-    db.get_character.side_effect = [None, {"name": "Thoradin"}]
-    monkeypatch.setattr("utils.dice.random.randint", lambda a, b: 1)  # 1d4 -> 1
-
-    await game.create_character("Sean", base_char_request(char_class="Magic-User", con_score=3))
+    await game.create_character("Sean", base_char_request(hp_max=17))
 
     created_data = db.create_character.await_args.args[2]
-    # con 3 -> -3 modifier; 1 - 3 = -2, floored to 1
-    assert created_data["hp_max"] == 1
+    assert created_data["hp_max"] == 17
+    assert created_data["hp_current"] == 17
 
 
 @pytest.mark.parametrize("char_class,expected_race", [
@@ -441,10 +426,9 @@ async def test_create_character_hp_floors_at_one(game, db, monkeypatch):
     ("Thief", "Human"),
     ("Magic-User", "Human"),
 ])
-async def test_create_character_assigns_race_from_class(game, db, monkeypatch, char_class, expected_race):
+async def test_create_character_assigns_race_from_class(game, db, char_class, expected_race):
     db.get_or_create_campaign.return_value = {"id": 1}
     db.get_character.side_effect = [None, {"name": "X"}]
-    monkeypatch.setattr("utils.dice.random.randint", lambda a, b: 3)
 
     await game.create_character("Sean", base_char_request(char_class=char_class))
 
@@ -452,10 +436,9 @@ async def test_create_character_assigns_race_from_class(game, db, monkeypatch, c
     assert created_data["race"] == expected_race
 
 
-async def test_create_character_persists_ability_scores_and_defaults(game, db, monkeypatch):
+async def test_create_character_persists_ability_scores_and_defaults(game, db):
     db.get_or_create_campaign.return_value = {"id": 1}
     db.get_character.side_effect = [None, {"name": "Thoradin"}]
-    monkeypatch.setattr("utils.dice.random.randint", lambda a, b: 3)
 
     await game.create_character("Sean", base_char_request(
         str_score=16, dex_score=12, con_score=14, int_score=9, wis_score=10, cha_score=8,
@@ -476,11 +459,10 @@ async def test_create_character_persists_ability_scores_and_defaults(game, db, m
     assert created_data["spells"] == []
 
 
-async def test_create_character_returns_final_db_record(game, db, monkeypatch):
+async def test_create_character_returns_final_db_record(game, db):
     db.get_or_create_campaign.return_value = {"id": 1}
     final_record = {"name": "Thoradin", "hp_max": 5}
     db.get_character.side_effect = [None, final_record]
-    monkeypatch.setattr("utils.dice.random.randint", lambda a, b: 3)
 
     result = await game.create_character("Sean", base_char_request())
 

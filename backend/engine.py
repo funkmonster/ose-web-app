@@ -12,7 +12,6 @@ from config import Config
 from utils.llm import get_gm_response
 from utils.state_parser import parse_state_block, strip_state_block, apply_state_changes
 from utils.summarizer import maybe_update_summary, SUMMARY_KEY
-from utils.dice import roll as roll_dice, bx_modifier, roll_ability_scores
 from utils.srd_lookup import SrdIndex, format_srd_context
 
 log = logging.getLogger("ose-app.engine")
@@ -23,6 +22,7 @@ GUILD = "local"
 CHANNEL = "main"
 
 PHYSICAL_DICE_KEY = "physical_dice_mode"
+VALID_CLASSES = ("Fighter", "Cleric", "Thief", "Magic-User", "Dwarf", "Elf", "Halfling")
 
 
 class GameEngine:
@@ -226,29 +226,22 @@ class GameEngine:
         return await self.db.get_all_characters(campaign["id"])
 
     async def create_character(self, user_name: str, data: dict) -> dict:
+        """Register a character sheet the party already worked out (e.g. at session 0).
+
+        This is a faithful import, not a generator — every mechanical value
+        (stats, HP, AC, gold, gear) comes from the player, not from dice
+        rolled by the app.
+        """
         campaign = await self.db.get_or_create_campaign(GUILD, CHANNEL)
 
         existing = await self.db.get_character(campaign["id"], user_name)
         if existing:
             raise ValueError(f"You already have a character: {existing['name']}")
 
-        from utils.dice import roll as _roll
-        CLASS_HIT_DIE = {
-            "Fighter": 8, "Cleric": 6, "Thief": 4,
-            "Magic-User": 4, "Dwarf": 8, "Elf": 6, "Halfling": 6,
-        }
         char_class = data["char_class"].strip().title()
-        if char_class not in CLASS_HIT_DIE:
+        if char_class not in VALID_CLASSES:
             raise ValueError(f"Unknown class: {char_class}. "
-                             f"Valid: {', '.join(CLASS_HIT_DIE.keys())}")
-
-        hd = CLASS_HIT_DIE[char_class]
-        if data.get("hp_max"):
-            hp_max = data["hp_max"]
-        else:
-            con_mod = bx_modifier(data["con_score"])
-            hp_roll, _, _ = _roll(f"1d{hd}")
-            hp_max = max(1, hp_roll + con_mod)
+                             f"Valid: {', '.join(VALID_CLASSES)}")
 
         race = data.get("race") or (
             char_class if char_class in ("Dwarf", "Elf", "Halfling") else "Human"
@@ -257,7 +250,7 @@ class GameEngine:
         await self.db.create_character(campaign["id"], user_name, {
             "name": data["name"], "class": char_class, "race": race,
             "level": 1, "xp": 0,
-            "hp_max": hp_max, "hp_current": hp_max,
+            "hp_max": data["hp_max"], "hp_current": data["hp_max"],
             "str": data["str_score"], "dex": data["dex_score"], "con": data["con_score"],
             "int": data["int_score"], "wis": data["wis_score"], "cha": data["cha_score"],
             "ac": data.get("ac", 9), "gold": data.get("gold", 0.0),

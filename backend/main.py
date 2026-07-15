@@ -18,7 +18,7 @@ from engine import GameEngine
 from ws_manager import manager
 from utils.database import Database
 from utils.srd_lookup import load_srd_index
-from utils.dice import roll as roll_dice, roll_ability_scores, bx_modifier
+from utils.dice import roll as roll_dice
 from models.schemas import (
     LoginRequest, LoginResponse, CreateCharacterRequest, PlayActionRequest,
     RollRequest, GMSayRequest, UpdateHPRequest, StartCampaignRequest,
@@ -179,15 +179,6 @@ async def roll(req: RollRequest, user: dict = Depends(current_user)):
         "physical": physical,
     })
     return {"total": total, "rolls": rolls}
-
-
-@app.get("/api/roll_stats")
-async def roll_stats(user: dict = Depends(current_user)):
-    stats = roll_ability_scores()
-    return {
-        stat: {"value": d["value"], "rolls": d["rolls"], "modifier": bx_modifier(d["value"])}
-        for stat, d in stats.items()
-    }
 
 
 # ── Characters ────────────────────────────────────────────────────────────────
