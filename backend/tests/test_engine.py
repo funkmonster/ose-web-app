@@ -26,7 +26,7 @@ def make_character(**overrides):
     data = {
         "discord_user_id": "Sean", "name": "Thoradin", "class": "Fighter", "level": 1,
         "hp_current": 10, "hp_max": 10, "alive": 1, "ac": 7, "gold": 20.0,
-        "inventory": [], "spells": [],
+        "inventory": [], "weapons_armor": [], "spells": [],
     }
     data.update(overrides)
     return data
@@ -456,6 +456,7 @@ async def test_create_character_persists_ability_scores_and_defaults(game, db):
     assert created_data["ac"] == 9
     assert created_data["gold"] == 0.0
     assert created_data["inventory"] == []
+    assert created_data["weapons_armor"] == []
     assert created_data["spells"] == []
 
 
@@ -481,6 +482,18 @@ async def test_update_inventory_delegates_to_db(game, db):
     db.get_campaign.return_value = {"id": 1}
     await game.update_inventory("Sean", ["Torch", "Rope"])
     db.update_character.assert_awaited_once_with(1, "Sean", inventory=["Torch", "Rope"])
+
+
+async def test_update_weapons_armor_raises_when_no_campaign(game, db):
+    db.get_campaign.return_value = None
+    with pytest.raises(ValueError, match="No campaign started"):
+        await game.update_weapons_armor("Sean", ["Sword"])
+
+
+async def test_update_weapons_armor_delegates_to_db(game, db):
+    db.get_campaign.return_value = {"id": 1}
+    await game.update_weapons_armor("Sean", ["Sword", "Chain mail"])
+    db.update_character.assert_awaited_once_with(1, "Sean", weapons_armor=["Sword", "Chain mail"])
 
 
 async def test_update_spells_raises_when_no_campaign(game, db):
@@ -621,30 +634,33 @@ def test_build_context_prefix_formats_party_line():
     chars = [{
         "name": "Thoradin", "class": "Fighter", "level": 2,
         "hp_current": 8, "hp_max": 10, "ac": 4, "gold": 15.5,
-        "inventory": [], "spells": [],
+        "inventory": [], "weapons_armor": [], "spells": [],
     }]
     prefix = build_context_prefix({}, chars)
     assert "Thoradin (Fighter Lvl 2) — HP 8/10, AC 4, Gold 15.5 gp" in prefix
 
 
-def test_build_context_prefix_includes_inventory_and_spells_when_present():
+def test_build_context_prefix_includes_gear_and_spells_when_present():
     chars = [{
         "name": "Elowen", "class": "Elf", "level": 1,
         "hp_current": 6, "hp_max": 6, "ac": 6, "gold": 0,
-        "inventory": ["Torch", "Rope"], "spells": ["Sleep"],
+        "inventory": ["Torch", "Rope"], "weapons_armor": ["Sword", "Chain mail"],
+        "spells": ["Sleep"],
     }]
     prefix = build_context_prefix({}, chars)
+    assert "Weapons & Armour: Sword, Chain mail" in prefix
     assert "Inventory: Torch, Rope" in prefix
     assert "Spells: Sleep" in prefix
 
 
-def test_build_context_prefix_omits_inventory_and_spells_lines_when_empty():
+def test_build_context_prefix_omits_gear_and_spells_lines_when_empty():
     chars = [{
         "name": "Elowen", "class": "Elf", "level": 1,
         "hp_current": 6, "hp_max": 6, "ac": 6, "gold": 0,
-        "inventory": [], "spells": [],
+        "inventory": [], "weapons_armor": [], "spells": [],
     }]
     prefix = build_context_prefix({}, chars)
+    assert "Weapons & Armour" not in prefix
     assert "Inventory" not in prefix
     assert "Spells" not in prefix
 

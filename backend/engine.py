@@ -254,7 +254,9 @@ class GameEngine:
             "str": data["str_score"], "dex": data["dex_score"], "con": data["con_score"],
             "int": data["int_score"], "wis": data["wis_score"], "cha": data["cha_score"],
             "ac": data.get("ac", 9), "gold": data.get("gold", 0.0),
-            "inventory": data.get("inventory", []), "spells": data.get("spells", []),
+            "inventory": data.get("inventory", []),
+            "weapons_armor": data.get("weapons_armor", []),
+            "spells": data.get("spells", []),
         })
         return await self.db.get_character(campaign["id"], user_name)
 
@@ -263,6 +265,12 @@ class GameEngine:
         if not campaign:
             raise ValueError("No campaign started.")
         await self.db.update_character(campaign["id"], user_name, inventory=inventory)
+
+    async def update_weapons_armor(self, user_name: str, weapons_armor: list[str]):
+        campaign = await self.get_campaign()
+        if not campaign:
+            raise ValueError("No campaign started.")
+        await self.db.update_character(campaign["id"], user_name, weapons_armor=weapons_armor)
 
     async def update_spells(self, user_name: str, spells: list[str]):
         campaign = await self.get_campaign()
@@ -341,6 +349,8 @@ def build_context_prefix(world: dict, chars: list[dict], srd_sections: list | No
                 f"  {c['name']} ({c['class']} Lvl {c['level']}) — "
                 f"HP {c['hp_current']}/{c['hp_max']}, AC {c['ac']}, Gold {c['gold']} gp"
             )
+            if c["weapons_armor"]:
+                lines.append(f"    Weapons & Armour: {', '.join(c['weapons_armor'])}")
             if c["inventory"]:
                 lines.append(f"    Inventory: {', '.join(c['inventory'])}")
             if c["spells"]:

@@ -299,6 +299,35 @@ def test_get_party_lists_created_characters(client):
     assert "Thoradin" in names
 
 
+def test_import_sheet_relays_parsed_prefill(client, main_module, monkeypatch):
+    parsed = {"name": "Trillby Calaver", "char_class": "Thief", "str_score": 7}
+    monkeypatch.setattr(main_module, "parse_ose_sheet", lambda pdf_bytes: parsed)
+    resp = client.post(
+        "/api/character/import_sheet",
+        files={"file": ("sheet.pdf", b"%PDF-1.4 fake", "application/pdf")},
+        headers=player_headers(),
+    )
+    assert resp.status_code == 200
+    assert resp.json() == parsed
+
+
+def test_import_sheet_invalid_pdf_returns_400(client):
+    resp = client.post(
+        "/api/character/import_sheet",
+        files={"file": ("sheet.pdf", b"not a pdf", "application/pdf")},
+        headers=player_headers(),
+    )
+    assert resp.status_code == 400
+
+
+def test_import_sheet_without_auth_returns_422(client):
+    resp = client.post(
+        "/api/character/import_sheet",
+        files={"file": ("sheet.pdf", b"not a pdf", "application/pdf")},
+    )
+    assert resp.status_code == 422
+
+
 def test_update_inventory_without_campaign_returns_400(client):
     resp = client.put("/api/character/inventory", json={"inventory": ["Torch"]}, headers=player_headers())
     assert resp.status_code == 400
@@ -312,6 +341,22 @@ def test_update_inventory_success(client):
 
     char = client.get("/api/character", headers=player_headers()).json()
     assert char["inventory"] == ["Torch", "Rope"]
+
+
+def test_update_weapons_armor_without_campaign_returns_400(client):
+    resp = client.put("/api/character/weapons_armor", json={"weapons_armor": ["Sword"]},
+                      headers=player_headers())
+    assert resp.status_code == 400
+
+
+def test_update_weapons_armor_success(client):
+    create_character(client)
+    resp = client.put("/api/character/weapons_armor",
+                      json={"weapons_armor": ["Sword", "Chain mail"]},
+                      headers=player_headers())
+    assert resp.status_code == 200
+    char = client.get("/api/character", headers=player_headers()).json()
+    assert char["weapons_armor"] == ["Sword", "Chain mail"]
 
 
 def test_update_spells_success(client):

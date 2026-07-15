@@ -55,6 +55,7 @@ class Database:
                     ac              INTEGER NOT NULL DEFAULT 9,
                     gold            REAL NOT NULL DEFAULT 0,
                     inventory       TEXT NOT NULL DEFAULT '[]',
+                    weapons_armor   TEXT NOT NULL DEFAULT '[]',
                     spells          TEXT NOT NULL DEFAULT '[]',
                     notes           TEXT NOT NULL DEFAULT '',
                     alive           INTEGER NOT NULL DEFAULT 1,
@@ -81,6 +82,14 @@ class Database:
                     UNIQUE(campaign_id, key)
                 );
             """)
+            # Databases created before weapons_armor existed need the column
+            # added — CREATE TABLE IF NOT EXISTS won't touch an existing table.
+            async with db.execute("PRAGMA table_info(characters)") as cur:
+                columns = {row[1] for row in await cur.fetchall()}
+            if "weapons_armor" not in columns:
+                await db.execute(
+                    "ALTER TABLE characters ADD COLUMN weapons_armor TEXT NOT NULL DEFAULT '[]'"
+                )
             await db.commit()
 
     # ── Campaigns ─────────────────────────────────────────────────────────────
@@ -131,8 +140,8 @@ class Database:
                 INSERT INTO characters
                   (campaign_id, discord_user_id, name, class, race, level, xp,
                    hp_max, hp_current, str, dex, con, int, wis, cha, ac,
-                   gold, inventory, spells, notes, created_at)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   gold, inventory, weapons_armor, spells, notes, created_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """, (
                 campaign_id, discord_user_id,
                 data["name"], data["class"], data.get("race", "Human"),
@@ -143,6 +152,7 @@ class Database:
                 data.get("ac", 9),
                 data.get("gold", 0),
                 json.dumps(data.get("inventory", [])),
+                json.dumps(data.get("weapons_armor", [])),
                 json.dumps(data.get("spells", [])),
                 data.get("notes", ""),
                 now,
@@ -161,6 +171,7 @@ class Database:
             return None
         c = dict(row)
         c["inventory"] = json.loads(c["inventory"])
+        c["weapons_armor"] = json.loads(c["weapons_armor"])
         c["spells"] = json.loads(c["spells"])
         return c
 
@@ -176,6 +187,7 @@ class Database:
         for row in rows:
             c = dict(row)
             c["inventory"] = json.loads(c["inventory"])
+            c["weapons_armor"] = json.loads(c["weapons_armor"])
             c["spells"] = json.loads(c["spells"])
             chars.append(c)
         return chars
@@ -183,6 +195,8 @@ class Database:
     async def update_character(self, campaign_id: int, discord_user_id: str, **kwargs):
         if "inventory" in kwargs:
             kwargs["inventory"] = json.dumps(kwargs["inventory"])
+        if "weapons_armor" in kwargs:
+            kwargs["weapons_armor"] = json.dumps(kwargs["weapons_armor"])
         if "spells" in kwargs:
             kwargs["spells"] = json.dumps(kwargs["spells"])
         sets = ", ".join(f"{k}=?" for k in kwargs)

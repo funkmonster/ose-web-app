@@ -44,6 +44,16 @@ export default function CharacterSheet({ character: c, setCharacter, className =
       </div>
 
       <EditableList
+        title="Weapons & Armour"
+        items={c.weapons_armor || []}
+        onSave={async (items) => {
+          await api.updateWeaponsArmor(items)
+          setCharacter({ ...c, weapons_armor: items })
+        }}
+        placeholder="Sword, Chain mail…"
+      />
+
+      <EditableList
         title="Inventory"
         items={c.inventory || []}
         onSave={async (items) => {

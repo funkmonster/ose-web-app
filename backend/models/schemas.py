@@ -32,6 +32,7 @@ class CreateCharacterRequest(BaseModel):
     gold: float = 0.0
     race: Optional[str] = None
     inventory: list[str] = []
+    weapons_armor: list[str] = []
     spells: list[str] = []
 
 
@@ -69,6 +70,10 @@ class RestRequest(BaseModel):
 
 class UpdateInventoryRequest(BaseModel):
     inventory: list[str]
+
+
+class UpdateWeaponsArmorRequest(BaseModel):
+    weapons_armor: list[str]
 
 
 class UpdateSpellsRequest(BaseModel):

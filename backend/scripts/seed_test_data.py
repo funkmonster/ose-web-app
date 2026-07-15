@@ -35,7 +35,8 @@ CHARACTERS = [
         "level": 1, "xp": 0, "hp_max": 8, "hp_current": 8,
         "str": 16, "dex": 12, "con": 14, "int": 9, "wis": 10, "cha": 8,
         "ac": 5, "gold": 30.0,
-        "inventory": ["Chain mail", "Shield", "Sword", "Torches (6)"],
+        "inventory": ["Torches (6)"],
+        "weapons_armor": ["Chain mail", "Shield", "Sword"],
         "spells": [],
     }),
     ("seed-player-2", {
@@ -43,7 +44,8 @@ CHARACTERS = [
         "level": 1, "xp": 0, "hp_max": 3, "hp_current": 3,
         "str": 8, "dex": 13, "con": 10, "int": 17, "wis": 11, "cha": 12,
         "ac": 9, "gold": 45.0,
-        "inventory": ["Dagger", "Spellbook", "Lantern"],
+        "inventory": ["Spellbook", "Lantern"],
+        "weapons_armor": ["Dagger"],
         "spells": ["Sleep"],
     }),
     ("seed-player-3", {
@@ -51,7 +53,8 @@ CHARACTERS = [
         "level": 1, "xp": 0, "hp_max": 4, "hp_current": 4,
         "str": 9, "dex": 16, "con": 12, "int": 10, "wis": 9, "cha": 13,
         "ac": 7, "gold": 25.0,
-        "inventory": ["Leather armor", "Sling", "Thieves' tools", "Rope (50')"],
+        "inventory": ["Thieves' tools", "Rope (50')"],
+        "weapons_armor": ["Leather armor", "Sling"],
         "spells": [],
     }),
 ]

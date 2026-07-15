@@ -13,18 +13,61 @@ const empty = {
   ac: 9,
   gold: 0,
   inventory: '',
+  weaponsArmor: '',
   spells: '',
 }
 
 export default function CharacterCreate({ onCreated, userName }) {
   const [sheet, setSheet] = useState(empty)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [importing, setImporting] = useState(false)
 
   const setField = (field) => (e) => {
     const raw = e.target.value
     const numeric = ['str', 'dex', 'con', 'int', 'wis', 'cha', 'hp', 'ac', 'gold']
     setSheet({ ...sheet, [field]: numeric.includes(field) ? Number(raw) : raw })
+  }
+
+  const importSheet = async (e) => {
+    const file = e.target.files[0]
+    e.target.value = ''
+    if (!file) return
+    setImporting(true)
+    setError('')
+    setNotice('')
+    try {
+      const parsed = await api.importSheet(file)
+      const matchedClass = CLASSES.find(
+        (c) => c.toLowerCase() === (parsed.char_class || '').toLowerCase()
+      )
+      setSheet((prev) => ({
+        ...prev,
+        ...(parsed.name && { name: parsed.name }),
+        ...(matchedClass && { charClass: matchedClass }),
+        ...(parsed.str_score && { str: parsed.str_score }),
+        ...(parsed.dex_score && { dex: parsed.dex_score }),
+        ...(parsed.con_score && { con: parsed.con_score }),
+        ...(parsed.int_score && { int: parsed.int_score }),
+        ...(parsed.wis_score && { wis: parsed.wis_score }),
+        ...(parsed.cha_score && { cha: parsed.cha_score }),
+        ...(parsed.hp_max && { hp: parsed.hp_max }),
+        ...(parsed.ac && { ac: parsed.ac }),
+        ...(parsed.gold !== undefined && { gold: parsed.gold }),
+        ...(parsed.inventory && { inventory: parsed.inventory.join('\n') }),
+        ...(parsed.weapons_armor && { weaponsArmor: parsed.weapons_armor.join('\n') }),
+      }))
+      setNotice(
+        parsed.char_class && !matchedClass
+          ? `Imported — but "${parsed.char_class}" isn't a recognized class, pick one below.`
+          : 'Imported from sheet — review the values below before joining.'
+      )
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setImporting(false)
+    }
   }
 
   const create = async () => {
@@ -48,6 +91,7 @@ export default function CharacterCreate({ onCreated, userName }) {
         ac: sheet.ac,
         gold: sheet.gold,
         inventory: toList(sheet.inventory),
+        weapons_armor: toList(sheet.weaponsArmor),
         spells: toList(sheet.spells),
       })
       onCreated(char)
@@ -68,6 +112,13 @@ export default function CharacterCreate({ onCreated, userName }) {
           exactly as written. No dice, no surprises.
         </p>
         {error && <div className="error">{error}</div>}
+        {notice && <div className="notice">{notice}</div>}
+
+        <label className="sheet-import">
+          Import a character sheet PDF (optional)
+          <input type="file" accept="application/pdf" onChange={importSheet} disabled={importing} />
+        </label>
+        {importing && <p>Reading sheet…</p>}
 
         <input
           placeholder="Character name"
@@ -109,6 +160,10 @@ export default function CharacterCreate({ onCreated, userName }) {
         <label>
           Gold
           <input type="number" min={0} value={sheet.gold} onChange={setField('gold')} />
+        </label>
+        <label>
+          Weapons &amp; Armour (one item per line)
+          <textarea value={sheet.weaponsArmor} onChange={setField('weaponsArmor')} />
         </label>
         <label>
           Inventory (one item per line)

@@ -4,6 +4,8 @@ aiosqlite>=0.19.0
 aiofiles>=23.0.0
 pyyaml>=6.0
 pydantic>=2.7.0
+pypdf>=4.0.0            # character sheet PDF import
+python-multipart>=0.0.9 # file upload parsing (FastAPI UploadFile)
 
 # LLM providers — install only what you use
 anthropic>=0.25.0       # LLM_PROVIDER=anthropic
