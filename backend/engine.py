@@ -22,6 +22,7 @@ GUILD = "local"
 CHANNEL = "main"
 
 PHYSICAL_DICE_KEY = "physical_dice_mode"
+HISTORY_ANCHOR_KEY = "history_anchor_id"
 VALID_CLASSES = ("Fighter", "Cleric", "Thief", "Magic-User", "Dwarf", "Elf", "Halfling")
 
 
@@ -30,6 +31,30 @@ class GameEngine:
         self.db = db
         self.config = config
         self.srd_index = srd_index
+
+    # ── GM prompt history ────────────────────────────────────────────────────
+
+    async def _gm_history(self, campaign_id: int) -> list[dict]:
+        """
+        History window for GM prompts, tuned for Anthropic prompt caching.
+
+        Instead of a sliding "last N rows" window (whose prefix shifts every
+        turn, invalidating the cache), we keep everything after a stored
+        anchor id, so the window only *grows* between turns. Once it exceeds
+        twice HISTORY_WINDOW, we advance the anchor to keep the newest
+        HISTORY_WINDOW rows — one cache re-write per ~HISTORY_WINDOW rows
+        instead of one per turn.
+        """
+        world = await self.db.get_world_state(campaign_id)
+        anchor = int(world.get(HISTORY_ANCHOR_KEY, "0"))
+        rows = await self.db.get_history_after(campaign_id, anchor)
+
+        keep = self.config.HISTORY_WINDOW
+        if len(rows) > keep * 2:
+            new_anchor = rows[-(keep + 1)]["id"]
+            rows = rows[-keep:]
+            await self.db.set_world_state(campaign_id, HISTORY_ANCHOR_KEY, str(new_anchor))
+        return rows
 
     # ── Campaign ─────────────────────────────────────────────────────────────
 
@@ -54,7 +79,7 @@ class GameEngine:
         await self.db.log_message(campaign["id"], "user", opening_prompt,
                                   author_id="SYSTEM", author_name="System")
 
-        history = await self.db.get_history(campaign["id"], limit=self.config.HISTORY_WINDOW)
+        history = await self._gm_history(campaign["id"])
         messages = build_messages(history)
 
         gm_reply = await get_gm_response(messages, self.config)
@@ -92,7 +117,7 @@ class GameEngine:
 
         world = await self.db.get_world_state(campaign["id"])
         all_chars = await self.db.get_all_characters(campaign["id"])
-        history = await self.db.get_history(campaign["id"], limit=self.config.HISTORY_WINDOW)
+        history = await self._gm_history(campaign["id"])
 
         srd_sections = self.srd_index.search(action) if self.srd_index else []
         context_prefix = build_context_prefix(world, all_chars, srd_sections=srd_sections)
@@ -122,7 +147,7 @@ class GameEngine:
         if not campaign:
             raise ValueError("No campaign started.")
 
-        history = await self.db.get_history(campaign["id"], limit=self.config.HISTORY_WINDOW)
+        history = await self._gm_history(campaign["id"])
         world = await self.db.get_world_state(campaign["id"])
         all_chars = await self.db.get_all_characters(campaign["id"])
 
@@ -305,11 +330,10 @@ class GameEngine:
 # ── Prompt-building helpers (shared with old bot logic) ───────────────────────
 
 def build_messages(history: list[dict], context_prefix: str = "") -> list[dict]:
+    # The volatile [CURRENT STATE] block goes AFTER the history: Anthropic
+    # prompt caching is a prefix match, so stable content (system prompt +
+    # transcript) must precede per-turn content or nothing ever caches.
     messages = []
-    if context_prefix:
-        messages.append({"role": "user", "content": context_prefix})
-        messages.append({"role": "assistant",
-                         "content": "Understood. I have the current party and world state."})
     for row in history:
         role = row["role"] if row["role"] in ("user", "assistant") else "user"
         author = row.get("author_name")
@@ -317,6 +341,8 @@ def build_messages(history: list[dict], context_prefix: str = "") -> list[dict]:
         if author and role == "user":
             content = f"[{author}]: {content}"
         messages.append({"role": role, "content": content})
+    if context_prefix:
+        messages.append({"role": "user", "content": context_prefix})
     return messages
 
 
@@ -335,7 +361,7 @@ def build_context_prefix(world: dict, chars: list[dict], srd_sections: list | No
             "wait for the player to report what they rolled."
         )
 
-    _internal = {SUMMARY_KEY, "player_action_count", PHYSICAL_DICE_KEY}
+    _internal = {SUMMARY_KEY, "player_action_count", PHYSICAL_DICE_KEY, HISTORY_ANCHOR_KEY}
     world_facts = {k: v for k, v in world.items() if k not in _internal}
     if world_facts:
         lines.append("\nCurrent World State:")
@@ -358,5 +384,10 @@ def build_context_prefix(world: dict, chars: list[dict], srd_sections: list | No
 
     if srd_sections:
         lines.append("\n" + format_srd_context(srd_sections))
+
+    lines.append(
+        "\nThis state block is reference only — respond as GM to the most "
+        "recent player message above."
+    )
 
     return "\n".join(lines)

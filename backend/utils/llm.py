@@ -106,6 +106,27 @@ async def get_gm_response(messages: list[dict], config: Config) -> str:
                          f"Set LLM_PROVIDER to 'anthropic', 'openai', or 'ollama'.")
 
 
+def _with_cache_breakpoint(messages: list[dict]) -> list[dict]:
+    """
+    Mark the last assistant turn as an Anthropic prompt-cache breakpoint.
+
+    Everything up to that turn (system prompt + prior transcript) is stable
+    across consecutive GM calls, so it can be written once and read at ~0.1x
+    input price afterwards. The turns after it (the new player action and the
+    [CURRENT STATE] block) change every request and stay unmarked.
+    """
+    for i in range(len(messages) - 1, -1, -1):
+        if messages[i]["role"] == "assistant":
+            marked = dict(messages[i])
+            marked["content"] = [{
+                "type": "text",
+                "text": messages[i]["content"],
+                "cache_control": {"type": "ephemeral"},
+            }]
+            return messages[:i] + [marked] + messages[i + 1:]
+    return messages
+
+
 async def _call_anthropic(messages: list[dict], config: Config) -> str:
     try:
         import anthropic
@@ -117,8 +138,17 @@ async def _call_anthropic(messages: list[dict], config: Config) -> str:
         model=config.ANTHROPIC_MODEL,
         max_tokens=2048,
         system=OSE_SYSTEM_PROMPT,
-        messages=messages,
+        messages=_with_cache_breakpoint(messages),
     )
+    usage = getattr(response, "usage", None)
+    if usage is not None:
+        log.info(
+            "anthropic usage: input=%s cache_read=%s cache_write=%s output=%s",
+            usage.input_tokens,
+            getattr(usage, "cache_read_input_tokens", None),
+            getattr(usage, "cache_creation_input_tokens", None),
+            usage.output_tokens,
+        )
     return response.content[0].text
 
 

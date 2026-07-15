@@ -129,6 +129,45 @@ async def test_call_anthropic_passes_system_prompt_model_and_messages(monkeypatc
     assert call["messages"] == messages
 
 
+async def test_call_anthropic_marks_last_assistant_message_for_caching(monkeypatch):
+    monkeypatch.setattr("anthropic.AsyncAnthropic", FakeAsyncAnthropic)
+    config = make_config()
+    messages = [
+        {"role": "user", "content": "[Sean]: I open the door."},
+        {"role": "assistant", "content": "It creaks open."},
+        {"role": "user", "content": "[Sean]: I step through."},
+        {"role": "user", "content": "[CURRENT STATE] party is healthy"},
+    ]
+
+    await llm._call_anthropic(messages, config)
+
+    sent = FakeAsyncAnthropic.last_instance.messages.create_calls[0]["messages"]
+    assert sent[1] == {
+        "role": "assistant",
+        "content": [{
+            "type": "text",
+            "text": "It creaks open.",
+            "cache_control": {"type": "ephemeral"},
+        }],
+    }
+    # Turns after the breakpoint (the volatile tail) stay unmarked...
+    assert sent[0] == messages[0]
+    assert sent[2:] == messages[2:]
+    # ...and the caller's list is not mutated.
+    assert messages[1] == {"role": "assistant", "content": "It creaks open."}
+
+
+async def test_call_anthropic_without_assistant_turn_adds_no_breakpoint(monkeypatch):
+    monkeypatch.setattr("anthropic.AsyncAnthropic", FakeAsyncAnthropic)
+    config = make_config()
+    messages = [{"role": "user", "content": "Begin the campaign."}]
+
+    await llm._call_anthropic(messages, config)
+
+    sent = FakeAsyncAnthropic.last_instance.messages.create_calls[0]["messages"]
+    assert sent == messages
+
+
 async def test_call_anthropic_uses_api_key_from_config(monkeypatch):
     monkeypatch.setattr("anthropic.AsyncAnthropic", FakeAsyncAnthropic)
     config = make_config(ANTHROPIC_API_KEY="sk-ant-specific")

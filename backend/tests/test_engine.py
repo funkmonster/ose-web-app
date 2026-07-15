@@ -13,7 +13,10 @@ from unittest.mock import AsyncMock
 import pytest
 
 import engine as engine_module
-from engine import GameEngine, build_messages, build_context_prefix, GUILD, CHANNEL
+from engine import (
+    GameEngine, build_messages, build_context_prefix,
+    GUILD, CHANNEL, HISTORY_ANCHOR_KEY,
+)
 
 
 def make_config(**overrides):
@@ -61,7 +64,8 @@ async def test_get_campaign_delegates_to_db(game, db):
 
 async def test_start_campaign_creates_and_seeds_opening_narration(game, db, monkeypatch):
     db.get_or_create_campaign.return_value = {"id": 1}
-    db.get_history.return_value = []
+    db.get_world_state.return_value = {}
+    db.get_history_after.return_value = []
     get_gm_response = AsyncMock(
         return_value="You stand before a gate.\n[STATE_UPDATE]\nworld:loc:Gate\n[/STATE_UPDATE]"
     )
@@ -76,7 +80,8 @@ async def test_start_campaign_creates_and_seeds_opening_narration(game, db, monk
 
 async def test_start_campaign_logs_system_prompt_then_raw_gm_reply(game, db, monkeypatch):
     db.get_or_create_campaign.return_value = {"id": 1}
-    db.get_history.return_value = []
+    db.get_world_state.return_value = {}
+    db.get_history_after.return_value = []
     monkeypatch.setattr(engine_module, "get_gm_response", AsyncMock(return_value="Opening scene."))
 
     await game.start_campaign("Camp", "Module X")
@@ -121,7 +126,7 @@ def play_setup(db, monkeypatch):
     db.get_character.return_value = char
     db.get_world_state.return_value = {}
     db.get_all_characters.return_value = [char]
-    db.get_history.return_value = []
+    db.get_history_after.return_value = []
     monkeypatch.setattr(engine_module, "maybe_update_summary", AsyncMock())
     return char
 
@@ -206,7 +211,7 @@ async def test_recap_raises_when_no_campaign(game, db):
 
 async def test_recap_strips_state_block_and_asks_for_brief_summary(game, db, monkeypatch):
     db.get_campaign.return_value = {"id": 1}
-    db.get_history.return_value = []
+    db.get_history_after.return_value = []
     db.get_world_state.return_value = {}
     db.get_all_characters.return_value = []
     get_gm_response = AsyncMock(
@@ -551,17 +556,60 @@ async def test_get_feed_respects_limit_argument(game, db):
     db.get_history.assert_awaited_once_with(1, limit=5)
 
 
+# ── _gm_history() ─────────────────────────────────────────────────────────────
+
+def make_history_rows(n):
+    return [
+        {"id": i, "role": "user", "author_name": None, "content": f"m{i}"}
+        for i in range(1, n + 1)
+    ]
+
+
+async def test_gm_history_reads_after_stored_anchor(game, db):
+    db.get_world_state.return_value = {HISTORY_ANCHOR_KEY: "7"}
+    db.get_history_after.return_value = []
+
+    await game._gm_history(1)
+
+    db.get_history_after.assert_awaited_once_with(1, 7)
+
+
+async def test_gm_history_grows_without_reanchoring_below_threshold(game, db, config):
+    rows = make_history_rows(config.HISTORY_WINDOW * 2)  # exactly 2x — no trim yet
+    db.get_world_state.return_value = {}
+    db.get_history_after.return_value = rows
+
+    result = await game._gm_history(1)
+
+    assert result == rows
+    db.set_world_state.assert_not_awaited()
+
+
+async def test_gm_history_reanchors_when_window_exceeds_twice_history_window(game, db, config):
+    keep = config.HISTORY_WINDOW
+    rows = make_history_rows(keep * 2 + 1)
+    db.get_world_state.return_value = {}
+    db.get_history_after.return_value = rows
+
+    result = await game._gm_history(1)
+
+    assert result == rows[-keep:]
+    expected_anchor = rows[-(keep + 1)]["id"]
+    db.set_world_state.assert_awaited_once_with(1, HISTORY_ANCHOR_KEY, str(expected_anchor))
+
+
 # ── build_messages() ──────────────────────────────────────────────────────────
 
 def test_build_messages_empty_history_no_prefix():
     assert build_messages([]) == []
 
 
-def test_build_messages_prepends_context_prefix_pair():
+def test_build_messages_appends_context_prefix_after_history():
+    # Context goes last: it changes every turn, and the Anthropic prompt
+    # cache is a prefix match — stable history must come first.
     messages = build_messages([], context_prefix="World state here.")
     assert messages == [
         {"role": "user", "content": "World state here."},
-        {"role": "assistant", "content": "Understood. I have the current party and world state."},
     ]
 
 
@@ -583,15 +631,14 @@ def test_build_messages_non_standard_role_defaults_to_user():
     assert messages == [{"role": "user", "content": "A note."}]
 
 
-def test_build_messages_preserves_history_order_after_prefix():
+def test_build_messages_puts_history_before_context_prefix():
     history = [
         {"role": "user", "author_name": "Sean", "content": "first"},
         {"role": "assistant", "author_name": None, "content": "second"},
     ]
     messages = build_messages(history, context_prefix="ctx")
-    assert [m["content"] for m in messages] == [
-        "ctx", "Understood. I have the current party and world state.", "[Sean]: first", "second",
-    ]
+    assert [m["content"] for m in messages] == ["[Sean]: first", "second", "ctx"]
+    assert messages[-1]["role"] == "user"
 
 
 # ── build_context_prefix() ────────────────────────────────────────────────────
@@ -616,12 +663,14 @@ def test_build_context_prefix_excludes_internal_keys_from_world_state():
     world = {
         "campaign_summary": "summary text",
         "player_action_count": "12",
+        "history_anchor_id": "99",
         "current_location": "Cavern",
     }
     prefix = build_context_prefix(world, [])
     assert "current_location: Cavern" in prefix
     assert "player_action_count" not in prefix
     assert "12" not in prefix
+    assert "history_anchor_id" not in prefix
 
 
 def test_build_context_prefix_omits_world_state_section_when_only_internal_keys():
