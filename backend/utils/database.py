@@ -232,6 +232,19 @@ class Database:
                 rows = await cur.fetchall()
         return list(reversed([dict(r) for r in rows]))
 
+    async def get_history_after(self, campaign_id: int, after_id: int = 0):
+        """All session-log rows with id > after_id, oldest first, ids included."""
+        async with aiosqlite.connect(self.path) as db:
+            db.row_factory = aiosqlite.Row
+            async with db.execute(
+                """SELECT id, role, author_name, content FROM session_log
+                   WHERE campaign_id=? AND id>?
+                   ORDER BY id ASC""",
+                (campaign_id, after_id)
+            ) as cur:
+                rows = await cur.fetchall()
+        return [dict(r) for r in rows]
+
     # ── World State ──────────────────────────────────────────────────────────
 
     async def set_world_state(self, campaign_id: int, key: str, value: str):

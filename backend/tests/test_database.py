@@ -239,6 +239,31 @@ async def test_get_history_empty_campaign_returns_empty_list(db):
     assert await db.get_history(campaign["id"]) == []
 
 
+async def test_get_history_after_returns_ids_and_filters_by_anchor(db):
+    campaign = await db.get_or_create_campaign("g1", "c1")
+    await db.log_message(campaign["id"], "user", "one")
+    await db.log_message(campaign["id"], "assistant", "two")
+    await db.log_message(campaign["id"], "user", "three")
+
+    all_rows = await db.get_history_after(campaign["id"])
+
+    assert [r["content"] for r in all_rows] == ["one", "two", "three"]
+    assert all(isinstance(r["id"], int) for r in all_rows)
+
+    after = await db.get_history_after(campaign["id"], all_rows[0]["id"])
+    assert [r["content"] for r in after] == ["two", "three"]
+
+
+async def test_get_history_after_is_scoped_to_campaign(db):
+    c1 = await db.get_or_create_campaign("g1", "c1")
+    c2 = await db.get_or_create_campaign("g1", "c2")
+    await db.log_message(c1["id"], "user", "c1 msg")
+    await db.log_message(c2["id"], "user", "c2 msg")
+
+    rows = await db.get_history_after(c2["id"])
+    assert [r["content"] for r in rows] == ["c2 msg"]
+
+
 # ── World State ──────────────────────────────────────────────────────────────
 
 async def test_set_and_get_world_state(db):
