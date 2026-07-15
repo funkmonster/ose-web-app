@@ -29,7 +29,7 @@ class Config:
     OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3")
 
     # ─── Context Management ──────────────────────────────────────────────────
-    HISTORY_WINDOW: int = int(os.getenv("HISTORY_WINDOW", "20"))
+    HISTORY_WINDOW: int = int(os.getenv("HISTORY_WINDOW", "60"))
     SUMMARIZE_EVERY: int = int(os.getenv("SUMMARIZE_EVERY", "10"))
     SUMMARIZE_CONTEXT_WINDOW: int = int(os.getenv("SUMMARIZE_CONTEXT_WINDOW", "40"))
 
