@@ -419,6 +419,13 @@ input, textarea, select {
 }
 .gate .box button:hover { background: var(--paper-ink); color: var(--paper); }
 .gate .error { color: var(--magenta); font-size: 13px; margin-bottom: 8px; }
+.gate .notice { color: var(--text-dim); font-size: 13px; margin-bottom: 8px; }
+.gate .box label.sheet-import {
+  border: 1.5px dashed var(--paper-ink);
+  padding: 10px;
+  margin-bottom: 16px;
+}
+.gate .box label.sheet-import input { margin-bottom: 0; }
 
 .stat-roll-grid {
   display: grid;

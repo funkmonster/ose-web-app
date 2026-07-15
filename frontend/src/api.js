@@ -22,6 +22,21 @@ async function request(method, path, body) {
   return res.json()
 }
 
+async function requestFile(path, file) {
+  const form = new FormData()
+  form.append('file', file)
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: { 'X-Passphrase': getPassphrase() },
+    body: form,
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }))
+    throw new Error(err.detail || 'Request failed')
+  }
+  return res.json()
+}
+
 export const api = {
   login: (passphrase) => request('POST', '/api/login', { passphrase }),
   me: () => request('GET', '/api/me'),
@@ -35,8 +50,11 @@ export const api = {
     request('POST', '/api/roll', { notation, reason, reported_result: reportedResult ?? null }),
   character: () => request('GET', '/api/character'),
   createCharacter: (data) => request('POST', '/api/character', data),
+  importSheet: (file) => requestFile('/api/character/import_sheet', file),
   party: () => request('GET', '/api/party'),
   updateInventory: (inventory) => request('PUT', '/api/character/inventory', { inventory }),
+  updateWeaponsArmor: (weapons_armor) =>
+    request('PUT', '/api/character/weapons_armor', { weapons_armor }),
   updateSpells: (spells) => request('PUT', '/api/character/spells', { spells }),
   rest: (rest_type) => request('POST', '/api/rest', { rest_type }),
   gmSay: (message) => request('POST', '/api/gm/say', { message }),

@@ -8,7 +8,10 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header, Depends
+from fastapi import (
+    FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header, Depends,
+    UploadFile, File,
+)
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pathlib import Path
@@ -19,11 +22,12 @@ from ws_manager import manager
 from utils.database import Database
 from utils.srd_lookup import load_srd_index
 from utils.dice import roll as roll_dice
+from utils.sheet_import import parse_ose_sheet
 from models.schemas import (
     LoginRequest, LoginResponse, CreateCharacterRequest, PlayActionRequest,
     RollRequest, GMSayRequest, UpdateHPRequest, StartCampaignRequest,
-    RestRequest, UpdateInventoryRequest, UpdateSpellsRequest,
-    PhysicalDiceModeRequest,
+    RestRequest, UpdateInventoryRequest, UpdateWeaponsArmorRequest,
+    UpdateSpellsRequest, PhysicalDiceModeRequest,
 )
 
 logging.basicConfig(level=logging.INFO,
@@ -189,6 +193,14 @@ async def get_character(user: dict = Depends(current_user)):
     return char or {}
 
 
+@app.post("/api/character/import_sheet")
+async def import_sheet(file: UploadFile = File(...), user: dict = Depends(current_user)):
+    try:
+        return parse_ose_sheet(await file.read())
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @app.post("/api/character")
 async def create_character(req: CreateCharacterRequest, user: dict = Depends(current_user)):
     try:
@@ -213,6 +225,17 @@ async def get_party(user: dict = Depends(current_user)):
 async def update_inventory(req: UpdateInventoryRequest, user: dict = Depends(current_user)):
     try:
         await engine.update_inventory(user["name"], req.inventory)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    party = await engine.get_party()
+    await manager.broadcast("party_update", {"party": party})
+    return {"ok": True}
+
+
+@app.put("/api/character/weapons_armor")
+async def update_weapons_armor(req: UpdateWeaponsArmorRequest, user: dict = Depends(current_user)):
+    try:
+        await engine.update_weapons_armor(user["name"], req.weapons_armor)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     party = await engine.get_party()
