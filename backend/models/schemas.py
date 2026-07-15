@@ -17,6 +17,8 @@ class LoginResponse(BaseModel):
 
 
 class CreateCharacterRequest(BaseModel):
+    """A faithfully-imported character sheet — every value comes from the
+    player's own sheet, not from dice rolled by the app."""
     name: str
     char_class: str
     str_score: int = Field(ge=3, le=18)
@@ -25,9 +27,9 @@ class CreateCharacterRequest(BaseModel):
     int_score: int = Field(ge=3, le=18)
     wis_score: int = Field(ge=3, le=18)
     cha_score: int = Field(ge=3, le=18)
+    hp_max: int = Field(ge=1)
     ac: int = 9
     gold: float = 0.0
-    hp_max: Optional[int] = Field(default=None, ge=1)
     race: Optional[str] = None
     inventory: list[str] = []
     spells: list[str] = []

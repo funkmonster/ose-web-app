@@ -94,7 +94,7 @@ Copy `users.yaml.example` to `users.yaml` (gitignored — it holds your table's 
 ## Playing
 
 1. **Log in** with your passphrase. It's remembered in your browser.
-2. **Create your character** — roll 3d6 down the line, pick a class, no take-backs. HP is rolled automatically.
+2. **Bring your character** — enter the sheet your party already worked out at session zero (name, class, stats, HP, AC, gear). This app doesn't generate characters; it just faithfully records the one you bring.
 3. Anyone can **start a campaign** from the toolbar (name + module).
 4. Type what your character does and press **Enter**. Everyone sees your action, the GM's thinking indicator, and the narration in real time.
 5. **Dice chips** roll and broadcast instantly — the GM will tell you what to roll.

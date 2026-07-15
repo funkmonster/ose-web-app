@@ -441,21 +441,6 @@ input, textarea, select {
   margin-bottom: 4px;
 }
 
-.gate .mode-toggle {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.gate .mode-toggle button {
-  flex: 1;
-  font-size: 12px;
-  padding: 8px 4px;
-  background: transparent;
-}
-.gate .mode-toggle button.active {
-  background: var(--paper-ink);
-  color: var(--paper);
-}
 .gate .box label {
   display: block;
   font-size: 11px;

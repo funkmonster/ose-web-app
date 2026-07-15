@@ -40,31 +40,5 @@ def roll(notation: str) -> tuple[int, list[int], str]:
     return total, rolls, desc
 
 
-def roll_ability_scores() -> dict:
-    """Roll 3d6 for each ability score (classic B/X method)."""
-    stats = {}
-    for stat in ("STR", "DEX", "CON", "INT", "WIS", "CHA"):
-        total, rolls, _ = roll("3d6")
-        stats[stat] = {"value": total, "rolls": rolls}
-    return stats
-
-
-def bx_modifier(score: int) -> int:
-    """Return the B/X ability modifier for a given score."""
-    table = {
-        (3, 3): -3,
-        (4, 5): -2,
-        (6, 8): -1,
-        (9, 12): 0,
-        (13, 15): 1,
-        (16, 17): 2,
-        (18, 18): 3,
-    }
-    for (low, high), mod in table.items():
-        if low <= score <= high:
-            return mod
-    return 0
-
-
 def format_modifier(mod: int) -> str:
     return f"+{mod}" if mod >= 0 else str(mod)

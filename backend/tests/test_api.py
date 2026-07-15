@@ -95,6 +95,7 @@ def create_character(client, headers=None, **overrides):
         name="Thoradin", char_class="Fighter",
         str_score=14, dex_score=12, con_score=14,
         int_score=9, wis_score=10, cha_score=8,
+        hp_max=8,
     )
     payload.update(overrides)
     return client.post("/api/character", json=payload, headers=headers)
@@ -259,15 +260,6 @@ def test_roll_broadcasts_dice_roll_event(client, mock_broadcast):
     client.post("/api/roll", json={"notation": "1d6"}, headers=player_headers())
     event_types = [call.args[0] for call in mock_broadcast.await_args_list]
     assert "dice_roll" in event_types
-
-
-def test_roll_stats_returns_all_six_abilities(client):
-    resp = client.get("/api/roll_stats", headers=player_headers())
-    assert resp.status_code == 200
-    body = resp.json()
-    assert set(body.keys()) == {"STR", "DEX", "CON", "INT", "WIS", "CHA"}
-    for stat in body.values():
-        assert "value" in stat and "rolls" in stat and "modifier" in stat
 
 
 # ── Characters ────────────────────────────────────────────────────────────────
